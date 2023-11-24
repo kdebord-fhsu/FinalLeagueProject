@@ -23,11 +23,13 @@ try:
                                                         queue=420,
                                                         start=0, count=num_matches_data)
 
-    print('Game times=')
+    print('Game times:')
     for match_id in match_history:
         match_data = lol_watcher.match.by_id(region=player_routing, match_id=match_id)
-        game_time = match_data['info']['gameDuration']
-        print(f"Match ID: {match_id}, Game Time: {game_time}")
+        game_time_seconds = match_data['info']['gameDuration']
+        game_time_minutes = game_time_seconds // 60
+        game_time_seconds %= 60
+        print(f"Match ID: {match_id}, Game Time: {game_time_minutes}m {game_time_seconds}s")
 
     print('Total Gold Obtained in Each Game:')
     for match_id in match_history:
