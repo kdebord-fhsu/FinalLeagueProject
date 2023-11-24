@@ -29,5 +29,15 @@ try:
         game_time = match_data['info']['gameDuration']
         print(f"Match ID: {match_id}, Game Time: {game_time}")
 
+    print('Total Gold Obtained in Each Game:')
+    for match_id in match_history:
+        try:
+            match_data = lol_watcher.match.by_id(region=player_routing, match_id=match_id)
+            print(f"Match ID: {match_id}")
+            for participant in match_data['info']['participants']:
+                print(f"Participant ID: {participant['participantId']}, Gold Earned: {participant['goldEarned']}")
+        except Exception as e:
+            print(f"Error fetching data for Match ID: {match_id}, Error: {e}")
+
 except Exception as e:
     print(f"An error occurred: {e}")
