@@ -1,51 +1,48 @@
 from riotwatcher import LolWatcher
 from dotenv import load_dotenv
+import streamlit as st
 import os
-from datetime import datetime
-
 
 def setup_env():
     load_dotenv('../../config.env')
-    api_key = "RGAPI-b8607081-dd4c-48b7-bc0f-6c6f27544678"
+    api_key = os.getenv("RIOT_API_KEY")
     lol_watcher = LolWatcher(api_key)
-    del (api_key)
     return lol_watcher
 
+def main():
+    st.set_page_config(page_title="LoL Match Information", page_icon="🎮", layout="wide")
 
-lol_watcher = setup_env()
+    st.title("League of Legends Match Information")
 
-# PLAYER PARAMETERS
-player_name = 'Sett on me Yuumi'
-num_matches_data = 10
-player_region = 'NA1'.lower()
-player_routing = 'americas'
+    # PLAYER PARAMETERS
+    player_name = st.text_input("Enter player name:", 'Sett on me Yuumi')
+    num_matches_data = st.slider("Number of Matches", 1, 10, 5)
+    player_region = st.selectbox("Select region", ['NA1', 'EUW1', 'EUN1'])
+    player_routing = 'americas'  # Change as needed
 
-try:
-    summoner = lol_watcher.summoner.by_name(player_region, player_name)
-    match_history = lol_watcher.match.matchlist_by_puuid(region=player_routing, puuid=summoner['puuid'],
-                                                         queue=420,
-                                                         start=0, count=num_matches_data)
+    try:
+        lol_watcher = setup_env()
+        summoner = lol_watcher.summoner.by_name(player_region, player_name)
+        match_history = lol_watcher.match.matchlist_by_puuid(
+            region=player_routing, puuid=summoner['puuid'], queue=420, start=0, count=num_matches_data
+        )
 
-    print('Game times and Dates:')
-    for match_id in match_history:
-        match_data = lol_watcher.match.by_id(region=player_routing, match_id=match_id)
-        game_time_seconds = match_data['info']['gameDuration']
-        game_time_minutes = game_time_seconds // 60
-        game_time_seconds %= 60
-        game_creation_timestamp = match_data['info']['gameCreation'] / 1000  # Convert to seconds
-        game_date = datetime.utcfromtimestamp(game_creation_timestamp).strftime('%Y-%m-%d %H:%M:%S')
+        with st.spinner("Fetching data..."):
+            st.subheader('Game Information:')
+            for match_reference in match_history['matches']:
+                match_id = match_reference['gameId']
+                match_data = lol_watcher.match.by_id(region=player_routing, match_id=match_id)
+                game_time_minutes = match_data['info']['gameDuration'] // 60
+                game_time_seconds = match_data['info']['gameDuration'] % 60
 
-        print(f"Match ID: {match_id}, Game Time: {game_time_minutes}m {game_time_seconds}s, Date: {game_date}")
+                st.text(f"Match ID: {match_id}")
+                st.text(f"Game Time: {game_time_minutes}m {game_time_seconds}s")
 
-    print('Total Gold Obtained in Each Game:')
-    for match_id in match_history:
-        try:
-            match_data = lol_watcher.match.by_id(region=player_routing, match_id=match_id)
-            print(f"Match ID: {match_id}")
-            for participant in match_data['info']['participants']:
-                print(f"Participant ID: {participant['participantId']}, Gold Earned: {participant['goldEarned']}")
-        except Exception as e:
-            print(f"Error fetching data for Match ID: {match_id}, Error: {e}")
+                for participant in match_data['info']['participants']:
+                    st.text(f"Participant ID: {participant['participantId']}, Gold Earned: {participant['goldEarned']}")
 
-except Exception as e:
-    print(f"An error occurred: {e}")
+    except Exception as e:
+        st.error(f"An error occurred: {str(e)}")
+
+if __name__ == "__main__":
+    main()
