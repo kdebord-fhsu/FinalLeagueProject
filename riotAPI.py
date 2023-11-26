@@ -4,8 +4,7 @@ import streamlit as st
 import os
 
 def setup_env():
-    load_dotenv('../../config.env')
-    api_key = os.getenv("RIOT_API_KEY")
+    api_key = "RGAPI-45c2a3ef-2d6f-4df7-995d-b324c08f2a0f"
     lol_watcher = LolWatcher(api_key)
     return lol_watcher
 
@@ -29,17 +28,30 @@ def main():
 
         with st.spinner("Fetching data..."):
             st.subheader('Game Information:')
-            for match_reference in match_history['matches']:
-                match_id = match_reference['gameId']
-                match_data = lol_watcher.match.by_id(region=player_routing, match_id=match_id)
-                game_time_minutes = match_data['info']['gameDuration'] // 60
-                game_time_seconds = match_data['info']['gameDuration'] % 60
+            for match_reference in match_history:
+                if isinstance(match_reference, str):
+                    match_id = match_reference
+                elif isinstance(match_reference, dict):
+                    match_id = match_reference.get('gameId')
+                else:
+                    st.warning(f"Invalid match reference structure: {match_reference}")
+                    continue
 
-                st.text(f"Match ID: {match_id}")
-                st.text(f"Game Time: {game_time_minutes}m {game_time_seconds}s")
+                st.write(f"Match Reference Structure: {type(match_reference)} - {match_reference}")
 
-                for participant in match_data['info']['participants']:
-                    st.text(f"Participant ID: {participant['participantId']}, Gold Earned: {participant['goldEarned']}")
+                if match_id:
+                    match_data = lol_watcher.match.by_id(region=player_routing, match_id=match_id)
+                    game_time_minutes = match_data['info']['gameDuration'] // 60
+                    game_time_seconds = match_data['info']['gameDuration'] % 60
+
+                    st.write(f"Match ID: {match_id}")
+                    st.write(f"Game Time: {game_time_minutes}m {game_time_seconds}s")
+
+                    for participant in match_data['info']['participants']:
+                        st.write(
+                            f"Participant ID: {participant['participantId']}, Gold Earned: {participant['goldEarned']}")
+                else:
+                    st.warning("Match ID not found in the match reference.")
 
     except Exception as e:
         st.error(f"An error occurred: {str(e)}")
