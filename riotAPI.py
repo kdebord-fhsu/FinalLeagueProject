@@ -4,7 +4,7 @@ import streamlit as st
 import os
 
 def setup_env():
-    api_key = "RGAPI-45c2a3ef-2d6f-4df7-995d-b324c08f2a0f"
+    api_key = "RGAPI-cee2be89-e297-4be8-a4c4-7d39ad13b1a1"
     lol_watcher = LolWatcher(api_key)
     return lol_watcher
 
