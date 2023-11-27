@@ -2,6 +2,7 @@ from riotwatcher import LolWatcher
 from dotenv import load_dotenv
 import streamlit as st
 import os
+import pandas as pd
 
 def setup_env():
     api_key = "RGAPI-cee2be89-e297-4be8-a4c4-7d39ad13b1a1"
@@ -26,6 +27,10 @@ def main():
             region=player_routing, puuid=summoner['puuid'], queue=420, start=0, count=num_matches_data
         )
 
+        # Create an empty DataFrame to store the data
+        data = {'Match ID': [], 'Game Time': [], 'Kills': [], 'Deaths': [], 'Assists': [],
+                'Gold Earned': [], 'CS (Minions Killed)': [], 'Damage Dealt to Champions': [], 'Vision Score': []}
+
         with st.spinner("Fetching data..."):
             st.subheader('Game Information:')
             for match_reference in match_history:
@@ -37,21 +42,36 @@ def main():
                     st.warning(f"Invalid match reference structure: {match_reference}")
                     continue
 
-                st.write(f"Match Reference Structure: {type(match_reference)} - {match_reference}")
-
                 if match_id:
                     match_data = lol_watcher.match.by_id(region=player_routing, match_id=match_id)
                     game_time_minutes = match_data['info']['gameDuration'] // 60
                     game_time_seconds = match_data['info']['gameDuration'] % 60
 
-                    st.write(f"Match ID: {match_id}")
-                    st.write(f"Game Time: {game_time_minutes}m {game_time_seconds}s")
+                    # Extracting player stats for the first participant (assuming it's the player we are querying)
+                    participants = match_data['info']['participants']
+                    if participants:
+                        first_participant = participants[0]
 
-                    for participant in match_data['info']['participants']:
-                        st.write(
-                            f"Participant ID: {participant['participantId']}, Gold Earned: {participant['goldEarned']}")
+                        # Append the data to the DataFrame
+                        data['Match ID'].append(match_id)
+                        data['Game Time'].append(f"{game_time_minutes}m {game_time_seconds}s")
+                        data['Kills'].append(first_participant.get('kills', 0))
+                        data['Deaths'].append(first_participant.get('deaths', 0))
+                        data['Assists'].append(first_participant.get('assists', 0))
+                        data['Gold Earned'].append(first_participant.get('goldEarned', 0))
+                        data['CS (Minions Killed)'].append(first_participant.get('totalMinionsKilled', 0))
+                        data['Damage Dealt to Champions'].append(first_participant.get('totalDamageDealtToChampions', 0))
+                        data['Vision Score'].append(first_participant.get('visionScore', 0))
+                    else:
+                        st.warning(f"No participant data found for Match ID: {match_id}")
                 else:
                     st.warning("Match ID not found in the match reference.")
+
+        # Create a DataFrame from the collected data
+        df = pd.DataFrame(data)
+
+        # Display the DataFrame in Streamlit
+        st.dataframe(df)
 
     except Exception as e:
         st.error(f"An error occurred: {str(e)}")
