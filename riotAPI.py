@@ -1,3 +1,7 @@
+#Kelton DeBord
+#INF-601
+#Final Project
+
 from riotwatcher import LolWatcher
 from dotenv import load_dotenv
 import streamlit as st
