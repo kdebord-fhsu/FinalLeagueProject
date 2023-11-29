@@ -1,7 +1,3 @@
-#Kelton DeBord
-#INF-601
-#Final Project
-
 from riotwatcher import LolWatcher
 from dotenv import load_dotenv
 import streamlit as st
@@ -9,7 +5,7 @@ import os
 import pandas as pd
 
 def setup_env():
-    api_key = "RGAPI-cee2be89-e297-4be8-a4c4-7d39ad13b1a1"
+    api_key = "RGAPI-3a6d5a64-918e-4f24-8dbd-3c291d370704"
     lol_watcher = LolWatcher(api_key)
     return lol_watcher
 
@@ -32,7 +28,7 @@ def main():
         )
 
         # Create an empty DataFrame to store the data
-        data = {'Match ID': [], 'Game Time': [], 'Kills': [], 'Deaths': [], 'Assists': [],
+        data = {'Match ID': [], 'Date Played': [], 'Game Time': [], 'Kills': [], 'Deaths': [], 'Assists': [],
                 'Gold Earned': [], 'CS (Minions Killed)': [], 'Damage Dealt to Champions': [], 'Vision Score': []}
 
         with st.spinner("Fetching data..."):
@@ -56,15 +52,21 @@ def main():
                     if participants:
                         first_participant = participants[0]
 
+                        # Convert timestamp to date
+                        date_played = pd.to_datetime(match_data['info']['gameCreation'], unit='ms').strftime(
+                            '%Y-%m-%d %H:%M:%S')
+
                         # Append the data to the DataFrame
                         data['Match ID'].append(match_id)
+                        data['Date Played'].append(date_played)
                         data['Game Time'].append(f"{game_time_minutes}m {game_time_seconds}s")
                         data['Kills'].append(first_participant.get('kills', 0))
                         data['Deaths'].append(first_participant.get('deaths', 0))
                         data['Assists'].append(first_participant.get('assists', 0))
                         data['Gold Earned'].append(first_participant.get('goldEarned', 0))
                         data['CS (Minions Killed)'].append(first_participant.get('totalMinionsKilled', 0))
-                        data['Damage Dealt to Champions'].append(first_participant.get('totalDamageDealtToChampions', 0))
+                        data['Damage Dealt to Champions'].append(
+                            first_participant.get('totalDamageDealtToChampions', 0))
                         data['Vision Score'].append(first_participant.get('visionScore', 0))
                     else:
                         st.warning(f"No participant data found for Match ID: {match_id}")
