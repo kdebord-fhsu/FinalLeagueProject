@@ -52,9 +52,9 @@ def main():
                     if participants:
                         first_participant = participants[0]
 
-                        # Convert timestamp to date
+                        # Convert timestamp to a user-friendly date format
                         date_played = pd.to_datetime(match_data['info']['gameCreation'], unit='ms').strftime(
-                            '%Y-%m-%d %H:%M:%S')
+                            '%B %d, %Y %H:%M')
 
                         # Append the data to the DataFrame
                         data['Match ID'].append(match_id)
