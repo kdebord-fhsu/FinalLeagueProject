@@ -3,9 +3,11 @@ from dotenv import load_dotenv
 import streamlit as st
 import os
 import pandas as pd
+load_dotenv()
 
+RIOT_API_KEY = os.getenv("RIOT_API_KEY")
 def setup_env():
-    api_key = os.getenv("RIOT_API_KEY")
+    api_key = RIOT_API_KEY
     lol_watcher = LolWatcher(api_key)
     return lol_watcher
 
