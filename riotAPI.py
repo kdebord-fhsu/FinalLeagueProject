@@ -5,7 +5,7 @@ import os
 import pandas as pd
 
 def setup_env():
-    api_key = "RGAPI-3a6d5a64-918e-4f24-8dbd-3c291d370704"
+    api_key = os.getenv("RIOT_API_KEY")
     lol_watcher = LolWatcher(api_key)
     return lol_watcher
 
