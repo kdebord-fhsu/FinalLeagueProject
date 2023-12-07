@@ -15,6 +15,84 @@ def setup_env():
     return lol_watcher
 
 
+def get_summoner_icon_url(summoner_id, lol_watcher):
+    summoner_data = lol_watcher.summoner.by_id(region='na1', encrypted_summoner_id=summoner_id)
+    profile_icon_id = summoner_data['profileIconId']
+    return f"http://ddragon.leagueoflegends.com/cdn/11.11.1/img/profileicon/{profile_icon_id}.png"
+
+
+def display_match_details(match_data):
+    # You can customize this function based on how you want to display match details
+    # For now, it's just showing a JSON representation
+    st.json(match_data)
+
+
+def fetch_match_data(lol_watcher, player_routing, summoner, num_matches_data):
+    match_history = lol_watcher.match.matchlist_by_puuid(
+        region=player_routing, puuid=summoner['puuid'], queue=420, start=0, count=num_matches_data
+    )
+
+    # Create an empty DataFrame to store the data
+    data = {'Match ID': [], 'Date Played': [], 'Game Time': [], 'Kills': [], 'Deaths': [], 'Assists': [],
+            'Gold Earned': [], 'CS (Minions Killed)': [], 'Damage Dealt to Champions': [], 'Vision Score': [],
+            'Result': [], 'Summoner Icon': []}
+
+    for match_reference in match_history:
+        if isinstance(match_reference, str):
+            match_id = match_reference
+        elif isinstance(match_reference, dict):
+            match_id = match_reference.get('gameId')
+        else:
+            st.warning(f"Invalid match reference structure: {match_reference}")
+            continue
+
+        if match_id:
+            match_data = lol_watcher.match.by_id(region=player_routing, match_id=match_id)
+
+            game_time_minutes = match_data['info']['gameDuration'] // 60
+            game_time_seconds = match_data['info']['gameDuration'] % 60
+
+            # Extracting player stats for the first participant (assuming it's the player we are querying)
+            participants = match_data['info']['participants']
+            participant_data = next((p for p in participants if p.get('summonerId') == summoner['id']), None)
+
+            if participant_data:
+                # Convert timestamp to a user-friendly date format
+                date_played = pd.to_datetime(match_data['info']['gameCreation'], unit='ms').strftime('%B %d, %Y %H:%M')
+
+                # Fetch summoner icon URL
+                summoner_icon_url = get_summoner_icon_url(summoner['id'], lol_watcher)
+
+                # Determine the result of the game (Win/Loss)
+                result = "Win" if participant_data.get('win', False) else "Loss"
+
+                # Append the data to the DataFrame
+                data['Match ID'].append(match_id)
+                data['Date Played'].append(date_played)
+                data['Game Time'].append(f"{game_time_minutes}m {game_time_seconds}s")
+                data['Result'].append(result)
+                data['Kills'].append(participant_data.get('kills', 0))
+                data['Deaths'].append(participant_data.get('deaths', 0))
+                data['Assists'].append(participant_data.get('assists', 0))
+                data['Gold Earned'].append(participant_data.get('goldEarned', 0))
+                data['CS (Minions Killed)'].append(participant_data.get('totalMinionsKilled', 0))
+                data['Damage Dealt to Champions'].append(participant_data.get('totalDamageDealtToChampions', 0))
+                data['Vision Score'].append(participant_data.get('visionScore', 0))
+                data['Summoner Icon'].append(summoner_icon_url)
+
+                # Make sure all lists have the same length
+                length = len(data['Match ID'])
+                for key in data:
+                    if len(data[key]) != length:
+                        data[key].extend([None] * (length - len(data[key])))
+            else:
+                st.warning(f"No valid participant data found for Match ID: {match_id}")
+
+    # Create a DataFrame from the collected data
+    df = pd.DataFrame(data)
+    return df
+
+
 def main():
     st.set_page_config(page_title="LoL Match Information", page_icon="🎮", layout="wide")
 
@@ -29,68 +107,24 @@ def main():
     try:
         lol_watcher = setup_env()
         summoner = lol_watcher.summoner.by_name(player_region, player_name)
-        match_history = lol_watcher.match.matchlist_by_puuid(
-            region=player_routing, puuid=summoner['puuid'], queue=420, start=0, count=num_matches_data
-        )
-
-        # Create an empty DataFrame to store the data
-        data = {'Match ID': [], 'Date Played': [], 'Game Time': [], 'Win/Loss': [], 'Kills': [], 'Deaths': [],
-                'Assists': [], 'Gold Earned': [], 'CS (Minions Killed)': [], 'Damage Dealt to Champions': [],
-                'Vision Score': []}
 
         with st.spinner("Fetching data..."):
-            st.subheader('Game Information:')
-            for match_reference in match_history:
-                if isinstance(match_reference, str):
-                    match_id = match_reference
-                elif isinstance(match_reference, dict):
-                    match_id = match_reference.get('gameId')
-                else:
-                    st.warning(f"Invalid match reference structure: {match_reference}")
-                    continue
+            df = fetch_match_data(lol_watcher, player_routing, summoner, num_matches_data)
 
-                if match_id:
-                    match_data = lol_watcher.match.by_id(region=player_routing, match_id=match_id)
-                    game_time_minutes = match_data['info']['gameDuration'] // 60
-                    game_time_seconds = match_data['info']['gameDuration'] % 60
+            # Display the DataFrame in Streamlit
+            st.dataframe(df)
 
-                    # Extracting participant data for the summoner
-                    participant_data = next(
-                        (participant for participant in match_data['info']['participants'] if
-                         participant['puuid'] == summoner['puuid']), None)
-
-                    if participant_data:
-                        # Convert timestamp to a user-friendly date format
-                        date_played = pd.to_datetime(match_data['info']['gameCreation'], unit='ms').strftime(
-                            '%B %d, %Y %H:%M')
-
-                        # Determine Win/Loss
-                        win_loss = "Win" if participant_data.get('win', False) else "Loss"
-
-                        # Append the data to the DataFrame
-                        data['Match ID'].append(match_id)
-                        data['Date Played'].append(date_played)
-                        data['Game Time'].append(f"{game_time_minutes}m {game_time_seconds}s")
-                        data['Win/Loss'].append(win_loss)
-                        data['Kills'].append(participant_data.get('kills', 0))
-                        data['Deaths'].append(participant_data.get('deaths', 0))
-                        data['Assists'].append(participant_data.get('assists', 0))
-                        data['Gold Earned'].append(participant_data.get('goldEarned', 0))
-                        data['CS (Minions Killed)'].append(participant_data.get('totalMinionsKilled', 0))
-                        data['Damage Dealt to Champions'].append(
-                            participant_data.get('totalDamageDealtToChampions', 0))
-                        data['Vision Score'].append(participant_data.get('visionScore', 0))
-                    else:
-                        st.warning(f"No participant data found for Match ID: {match_id}")
-                else:
-                    st.warning("Match ID not found in the match reference.")
-
-        # Create a DataFrame from the collected data
-        df = pd.DataFrame(data)
-
-        # Display the DataFrame in Streamlit
-        st.dataframe(df)
-
+            for _, row in df.iterrows():
+                # Create a column for each match
+                col1, col2 = st.columns(2)
+                with col1:
+                    # Display basic match information
+                    st.write(f"Date Played: {row['Date Played']}")
+                    st.write(f"Game Time: {row['Game Time']}")
+                with col2:
+                    # Display details and statistics
+                    with st.expander(f"Match ID: {row['Match ID']} - Result: {row['Result']}"):
+                        st.write(f"Kills: {row['Kills']}, Deaths: {row['Deaths']}, Assists: {row['Assists']}")
     except Exception as e:
         st.error(f"An error occurred: {str(e)}")
 
