@@ -17,4 +17,6 @@ The application fetches match details, including game duration, kills, deaths, a
 1. Install the required Python packages:
 
    ```bash
-   pip install riotwatcher streamlit pandas
+   pip install requirements.txt
+
+2. Create a .env file with your RIOT_API_Key
