@@ -94,40 +94,66 @@ def fetch_match_data(lol_watcher, player_routing, summoner, num_matches_data):
 
 
 def main():
+    # Set Streamlit page configuration
     st.set_page_config(page_title="LoL Match Information", page_icon="🎮", layout="wide")
 
+    # Display main title
     st.title("League of Legends Match Information")
 
-    # PLAYER PARAMETERS
+    # Get player parameters from user input
     player_name = st.text_input("Enter player name:", 'Sett on me Yuumi')
     num_matches_data = st.slider("Number of Matches", 1, 10, 5)
     player_region = st.selectbox("Select region", ['NA1', 'EUW1', 'EUN1'])
     player_routing = 'americas'  # Change as needed
 
     try:
+        # Set up Riot API environment
         lol_watcher = setup_env()
         summoner = lol_watcher.summoner.by_name(player_region, player_name)
 
         with st.spinner("Fetching data..."):
+            # Fetch match data
             df = fetch_match_data(lol_watcher, player_routing, summoner, num_matches_data)
 
-            # Display the DataFrame in Streamlit
-            st.dataframe(df)
-
+            # Display match details for each match
             for _, row in df.iterrows():
                 # Create a column for each match
                 col1, col2 = st.columns(2)
+
                 with col1:
                     # Display basic match information
-                    st.write(f"Date Played: {row['Date Played']}")
-                    st.write(f"Game Time: {row['Game Time']}")
+                    result_color = 'green' if row['Result'] == 'Win' else 'red'
+                    st.write(f"Date Played: <span style='color:{result_color}'>{row['Date Played']}</span>",
+                             unsafe_allow_html=True)
+                    st.write(f"Game Time: <span style='color:{result_color}'>{row['Game Time']}</span>",
+                             unsafe_allow_html=True)
+
                 with col2:
-                    # Display details and statistics
-                    with st.expander(f"Match ID: {row['Match ID']} - Result: {row['Result']}"):
-                        st.write(f"Kills: {row['Kills']}, Deaths: {row['Deaths']}, Assists: {row['Assists']}")
+                    # Display details and statistics inside the expander
+                    expander_title = f"Match ID: {row['Match ID']} - Result: {row['Result']}"
+                    with st.expander(expander_title):
+                        result_color = 'green' if row['Result'] == 'Win' else 'red'
+                        st.write(f"Kills: <span style='color:{result_color}'>{row['Kills']}</span>",
+                                 unsafe_allow_html=True)
+                        st.write(f"Deaths: <span style='color:{result_color}'>{row['Deaths']}</span>",
+                                 unsafe_allow_html=True)
+                        st.write(f"Assists: <span style='color:{result_color}'>{row['Assists']}</span>",
+                                 unsafe_allow_html=True)
+                        st.write(f"Gold Earned: <span style='color:{result_color}'>{row['Gold Earned']}</span>",
+                                 unsafe_allow_html=True)
+                        st.write(
+                            f"CS (Minions Killed): <span style='color:{result_color}'>{row['CS (Minions Killed)']}</span>",
+                            unsafe_allow_html=True)
+                        st.write(
+                            f"Damage Dealt to Champions: <span style='color:{result_color}'>{row['Damage Dealt to Champions']}</span>",
+                            unsafe_allow_html=True)
+                        st.write(f"Vision Score: <span style='color:{result_color}'>{row['Vision Score']}</span>",
+                                 unsafe_allow_html=True)
+                        # Add more details and statistics as needed
+
     except Exception as e:
         st.error(f"An error occurred: {str(e)}")
 
-
 if __name__ == "__main__":
     main()
+
