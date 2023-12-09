@@ -15,12 +15,6 @@ def setup_env():
     return lol_watcher
 
 
-def get_summoner_icon_url(summoner_id, lol_watcher):
-    summoner_data = lol_watcher.summoner.by_id(region='na1', encrypted_summoner_id=summoner_id)
-    profile_icon_id = summoner_data['profileIconId']
-    return f"http://ddragon.leagueoflegends.com/cdn/11.11.1/img/profileicon/{profile_icon_id}.png"
-
-
 def display_match_details(match_data):
     # You can customize this function based on how you want to display match details
     # For now, it's just showing a JSON representation
@@ -35,7 +29,8 @@ def fetch_match_data(lol_watcher, player_routing, summoner, num_matches_data):
     # Create an empty DataFrame to store the data
     data = {'Match ID': [], 'Date Played': [], 'Game Time': [], 'Kills': [], 'Deaths': [], 'Assists': [],
             'Gold Earned': [], 'CS (Minions Killed)': [], 'Damage Dealt to Champions': [], 'Vision Score': [],
-            'Result': [], 'Summoner Icon': []}
+            'Result': [], 'Summoner Icon': [], 'Game Mode': [], 'wardsPlaced': [], 'wardsKilled': [],
+            'visionWardsBoughtInGame': [], 'visionScorePerMinute': []}
 
     for match_reference in match_history:
         if isinstance(match_reference, str):
@@ -60,9 +55,6 @@ def fetch_match_data(lol_watcher, player_routing, summoner, num_matches_data):
                 # Convert timestamp to a user-friendly date format
                 date_played = pd.to_datetime(match_data['info']['gameCreation'], unit='ms').strftime('%B %d, %Y %H:%M')
 
-                # Fetch summoner icon URL
-                summoner_icon_url = get_summoner_icon_url(summoner['id'], lol_watcher)
-
                 # Determine the result of the game (Win/Loss)
                 result = "Win" if participant_data.get('win', False) else "Loss"
 
@@ -78,7 +70,10 @@ def fetch_match_data(lol_watcher, player_routing, summoner, num_matches_data):
                 data['CS (Minions Killed)'].append(participant_data.get('totalMinionsKilled', 0))
                 data['Damage Dealt to Champions'].append(participant_data.get('totalDamageDealtToChampions', 0))
                 data['Vision Score'].append(participant_data.get('visionScore', 0))
-                data['Summoner Icon'].append(summoner_icon_url)
+                data['Game Mode'].append(match_data['info']['gameMode'])
+                data['wardsPlaced'].append(participant_data.get('wardsPlaced', 0))
+                data['wardsKilled'].append(participant_data.get('wardsKilled', 0))
+                data['visionWardsBoughtInGame'].append(participant_data.get('visionWardsBoughtInGame', 0))
 
                 # Make sure all lists have the same length
                 length = len(data['Match ID'])
@@ -130,29 +125,42 @@ def main():
 
                 with col2:
                     # Display details and statistics inside the expander
-                    expander_title = f"Match ID: {row['Match ID']} - Result: {row['Result']}"
+                    expander_title = f"Game Mode: {row['Game Mode']} - Result: {row['Result']}"
                     with st.expander(expander_title):
                         result_color = 'green' if row['Result'] == 'Win' else 'red'
+
+                        # Format gold earned with commas
+                        gold_earned_formatted = "{:,}".format(row['Gold Earned'])
+
+                        # Format damage dealt to champions with commas
+                        damage_to_champions_formatted = "{:,}".format(row['Damage Dealt to Champions'])
+
                         st.write(f"Kills: <span style='color:{result_color}'>{row['Kills']}</span>",
                                  unsafe_allow_html=True)
                         st.write(f"Deaths: <span style='color:{result_color}'>{row['Deaths']}</span>",
                                  unsafe_allow_html=True)
                         st.write(f"Assists: <span style='color:{result_color}'>{row['Assists']}</span>",
                                  unsafe_allow_html=True)
-                        st.write(f"Gold Earned: <span style='color:{result_color}'>{row['Gold Earned']}</span>",
+                        st.write(f"Gold Earned: <span style='color:{result_color}'>{gold_earned_formatted}</span>",
                                  unsafe_allow_html=True)
                         st.write(
                             f"CS (Minions Killed): <span style='color:{result_color}'>{row['CS (Minions Killed)']}</span>",
                             unsafe_allow_html=True)
                         st.write(
-                            f"Damage Dealt to Champions: <span style='color:{result_color}'>{row['Damage Dealt to Champions']}</span>",
+                            f"Damage Dealt to Champions: <span style='color:{result_color}'>{damage_to_champions_formatted}</span>",
                             unsafe_allow_html=True)
                         st.write(f"Vision Score: <span style='color:{result_color}'>{row['Vision Score']}</span>",
                                  unsafe_allow_html=True)
+                        st.write(f"Warding: <span style='color:{result_color}'>{row['wardsPlaced']} placed </span>, "
+                                 f"<span style='color:{result_color}'>{row['wardsKilled']} killed</span>" ,
+                                 unsafe_allow_html=True)
+                        st.write(
+                            f"Vision Wards Bought: <span style='color:{result_color}'>{row['visionWardsBoughtInGame']}</span>",
+                            unsafe_allow_html=True)
                         # Add more details and statistics as needed
-
     except Exception as e:
         st.error(f"An error occurred: {str(e)}")
+
 
 if __name__ == "__main__":
     main()
