@@ -3,6 +3,7 @@ from dotenv import load_dotenv
 import streamlit as st
 import os
 import pandas as pd
+import matplotlib.pyplot as plt
 
 load_dotenv()
 
@@ -21,18 +22,39 @@ def display_match_details(match_data):
     st.json(match_data)
 
 
+def calculate_kda(kills, deaths, assists):
+    deaths = max(deaths, 1)  # To avoid division by zero
+    return (kills + assists) / deaths
+
+
 def fetch_match_data(lol_watcher, player_routing, summoner, num_matches_data):
     match_history = lol_watcher.match.matchlist_by_puuid(
         region=player_routing, puuid=summoner['puuid'], queue=420, start=0, count=num_matches_data
     )
 
     # Create an empty DataFrame to store the data
-    data = {'Match ID': [], 'Date Played': [], 'Game Time': [], 'Kills': [], 'Deaths': [], 'Assists': [],
-            'Gold Earned': [], 'CS (Minions Killed)': [], 'Damage Dealt to Champions': [], 'Vision Score': [],
-            'Result': [], 'Summoner Icon': [], 'Game Mode': [], 'wardsPlaced': [], 'wardsKilled': [],
-            'visionWardsBoughtInGame': [], 'visionScorePerMinute': []}
+    data = {
+        'Match ID': [],
+        'Date Played': [],
+        'Game Time': [],
+        'Kills': [],
+        'Deaths': [],
+        'Assists': [],
+        'KDA': [],
+        'Gold Earned': [],
+        'CS (Minions Killed)': [],
+        'Damage Dealt to Champions': [],
+        'Vision Score': [],
+        'Result': [],
+        'Summoner Icon': [],
+        'Game Mode': [],
+        'wardsPlaced': [],
+        'wardsKilled': [],
+        'visionWardsBoughtInGame': [],
+        'visionScorePerMinute': []
+    }
 
-    for match_reference in match_history:
+    for i, match_reference in enumerate(match_history, start=1):
         if isinstance(match_reference, str):
             match_id = match_reference
         elif isinstance(match_reference, dict):
@@ -58,14 +80,24 @@ def fetch_match_data(lol_watcher, player_routing, summoner, num_matches_data):
                 # Determine the result of the game (Win/Loss)
                 result = "Win" if participant_data.get('win', False) else "Loss"
 
+                # Calculate KDA
+                try:
+                    kda = calculate_kda(participant_data.get('kills', 0),
+                                        participant_data.get('deaths', 0),
+                                        participant_data.get('assists', 0))
+                except Exception as e:
+                    st.error(f"Error calculating KDA for Match ID {match_id}: {str(e)}")
+                    kda = None
+
                 # Append the data to the DataFrame
-                data['Match ID'].append(match_id)
+                data['Match ID'].append(i)
                 data['Date Played'].append(date_played)
                 data['Game Time'].append(f"{game_time_minutes}m {game_time_seconds}s")
                 data['Result'].append(result)
                 data['Kills'].append(participant_data.get('kills', 0))
                 data['Deaths'].append(participant_data.get('deaths', 0))
                 data['Assists'].append(participant_data.get('assists', 0))
+                data['KDA'].append(kda)
                 data['Gold Earned'].append(participant_data.get('goldEarned', 0))
                 data['CS (Minions Killed)'].append(participant_data.get('totalMinionsKilled', 0))
                 data['Damage Dealt to Champions'].append(participant_data.get('totalDamageDealtToChampions', 0))
@@ -75,17 +107,16 @@ def fetch_match_data(lol_watcher, player_routing, summoner, num_matches_data):
                 data['wardsKilled'].append(participant_data.get('wardsKilled', 0))
                 data['visionWardsBoughtInGame'].append(participant_data.get('visionWardsBoughtInGame', 0))
 
-                # Make sure all lists have the same length
-                length = len(data['Match ID'])
-                for key in data:
-                    if len(data[key]) != length:
-                        data[key].extend([None] * (length - len(data[key])))
-            else:
-                st.warning(f"No valid participant data found for Match ID: {match_id}")
+    # Make sure all lists have the same length
+    length = len(data['Match ID'])
+    for key in data:
+        if len(data[key]) != length:
+            data[key].extend([None] * (length - len(data[key])))
 
     # Create a DataFrame from the collected data
     df = pd.DataFrame(data)
     return df
+
 
 
 def main():
@@ -97,7 +128,7 @@ def main():
 
     # Get player parameters from user input
     player_name = st.text_input("Enter player name:", 'Sett on me Yuumi')
-    num_matches_data = st.slider("Number of Matches", 1, 10, 5)
+    num_matches_data = st.slider("Number of Matches", 1, 20, 5)
     player_region = st.selectbox("Select region", ['NA1', 'EUW1', 'EUN1'])
     player_routing = 'americas'  # Change as needed
 
@@ -135,6 +166,8 @@ def main():
                         # Format damage dealt to champions with commas
                         damage_to_champions_formatted = "{:,}".format(row['Damage Dealt to Champions'])
 
+                        st.write(f"KDA: <span style='color:{result_color}'>{row['KDA']:.2f}</span>",
+                                 unsafe_allow_html=True)
                         st.write(f"Kills: <span style='color:{result_color}'>{row['Kills']}</span>",
                                  unsafe_allow_html=True)
                         st.write(f"Deaths: <span style='color:{result_color}'>{row['Deaths']}</span>",
@@ -157,7 +190,41 @@ def main():
                         st.write(
                             f"Vision Wards Bought: <span style='color:{result_color}'>{row['visionWardsBoughtInGame']}</span>",
                             unsafe_allow_html=True)
-                        # Add more details and statistics as needed
+
+                        # Extracting gold earned data for each match
+                        gold_earned = df['Gold Earned'].astype(int).tolist()
+
+                        # Calculate the absolute difference in gold earned between consecutive matches
+                        gold_earned_diff = [abs(gold_earned[i] - gold_earned[i - 1]) for i in
+                                            range(1, len(gold_earned))]
+                        # Create subplots for gold earned difference and KDA/vision score
+                        if gold_earned_diff and df['KDA'].notna().all() and df['Vision Score'].notna().all():
+                            fig, (ax_gold, ax_kda_vs) = plt.subplots(1, 2, figsize=(12, 4))
+
+                            # Gold earned difference subplot
+                            ax_gold.plot(range(1, len(gold_earned_diff) + 1), gold_earned_diff, marker='o',
+                                         linestyle='-', color='gold')
+                            ax_gold.set_title('Gold Earned Difference Between Matches')
+                            ax_gold.set_ylim(0, max(gold_earned_diff))
+                            ax_gold.set_xlabel('Match Index')
+                            ax_gold.set_ylabel('Gold Earned Difference')
+
+                            # KDA and vision score subplot
+                            ax_kda_vs.plot(range(1, len(df['KDA']) + 1), df['KDA'], marker='o', linestyle='-',
+                                           color='blue', label='KDA')
+                            ax_kda_vs.plot(range(1, len(df['Vision Score']) + 1), df['Vision Score'], marker='o',
+                                           linestyle='-', color='green', label='Vision Score')
+                            ax_kda_vs.set_title('KDA and Vision Score Between Matches')
+                            ax_kda_vs.set_ylim(0, max(max(df['KDA']), max(df['Vision Score'])))
+                            ax_kda_vs.set_xlabel('Match Index')
+                            ax_kda_vs.set_ylabel('Value')
+                            ax_kda_vs.legend()
+
+                            # Adjust layout to prevent overlap
+                            plt.tight_layout()
+
+                            # Show the subplots
+                            st.pyplot(fig)
     except Exception as e:
         st.error(f"An error occurred: {str(e)}")
 
