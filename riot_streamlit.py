@@ -1,8 +1,6 @@
 import streamlit as st
-import pandas as pd
 import matplotlib.pyplot as plt
-from riot_data_functions import setup_env, fetch_match_data, calculate_kda, display_match_details
-
+from riot_data_functions import setup_env, fetch_match_data
 
 def plot_graph(df, selected_info):
     if not selected_info:
@@ -25,7 +23,6 @@ def plot_graph(df, selected_info):
     ax.legend()
     plt.tight_layout()
     st.pyplot(fig)
-
 
 def main():
     # Set Streamlit page configuration
@@ -99,56 +96,16 @@ def main():
                             f"Vision Wards Bought: <span style='color:{result_color}'>{row['visionWardsBoughtInGame']}</span>",
                             unsafe_allow_html=True)
 
-                        # Extracting gold earned data for each match
-                        gold_earned = df['Gold Earned'].astype(int).tolist()
+                        # Display the multiselect widget for selecting information to plot
+                        selected_info = st.multiselect("Select information to plot",
+                                                       ['Gold Earned', 'KDA', 'Vision Score'],
+                                                       key=f"{row['Match ID']}_multiselect")
 
-                        # Calculate the absolute difference in gold earned between consecutive matches
-                        gold_earned_diff = [abs(gold_earned[i] - gold_earned[i - 1]) for i in
-                                            range(1, len(gold_earned))]
-                        # Create subplots for gold earned difference and KDA/vision score
-                        if gold_earned_diff and df['KDA'].notna().all() and df['Vision Score'].notna().all():
-                            fig, (ax_gold, ax_kda_vs) = plt.subplots(1, 2, figsize=(12, 4))
+                        # Display the graph based on user's selection
+                        plot_graph(df, selected_info)
 
-                            # Gold earned difference subplot
-                            ax_gold.plot(range(1, len(gold_earned_diff) + 1), gold_earned_diff, marker='o',
-                                         linestyle='-', color='gold')
-                            ax_gold.set_title('Gold Earned Difference Between Matches')
-                            ax_gold.set_ylim(0, max(gold_earned_diff))
-                            ax_gold.set_xlabel('Match Index')
-                            ax_gold.set_ylabel('Gold Earned Difference')
-
-                            # KDA and vision score subplot
-                            ax_kda_vs.plot(range(1, len(df['KDA']) + 1), df['KDA'], marker='o', linestyle='-',
-                                           color='blue', label='KDA')
-                            ax_kda_vs.plot(range(1, len(df['Vision Score']) + 1), df['Vision Score'], marker='o',
-                                           linestyle='-', color='green', label='Vision Score')
-                            ax_kda_vs.set_title('KDA and Vision Score Between Matches')
-                            ax_kda_vs.set_ylim(0, max(max(df['KDA']), max(df['Vision Score'])))
-                            ax_kda_vs.set_xlabel('Match Index')
-                            ax_kda_vs.set_ylabel('Value')
-                            ax_kda_vs.legend()
-
-                            # Adjust layout to prevent overlap
-                            plt.tight_layout()
-
-                            # Show the subplots
-                            st.pyplot(fig)
-
-                            # Initialize the counter in session state
-                            if 'widget_counter' not in st.session_state:
-                                st.session_state.widget_counter = 0
-
-                            # Display the multiselect widget for selecting information to plot
-                            unique_key = f"info_multiselect_{st.session_state.widget_counter}"
-                            st.session_state.widget_counter += 1
-                            selected_info = st.multiselect("Select information to plot",
-                                                           ['Gold Earned', 'KDA', 'Vision Score'], key=unique_key)
-
-                            # Display the graph based on the user's selection
-                            plot_graph(df, selected_info)
     except Exception as e:
         st.error(f"An error occurred: {str(e)}")
-
 
 if __name__ == "__main__":
     main()
