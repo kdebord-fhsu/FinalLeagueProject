@@ -4,6 +4,29 @@ import matplotlib.pyplot as plt
 from riot_data_functions import setup_env, fetch_match_data, calculate_kda, display_match_details
 
 
+def plot_graph(df, selected_info):
+    if not selected_info:
+        st.warning("Please select at least one information to plot.")
+        return
+
+    fig, ax = plt.subplots(figsize=(10, 6))
+
+    for info in selected_info:
+        if info == 'Gold Earned':
+            ax.plot(df['Match ID'], df['Gold Earned'], marker='o', linestyle='-', label='Gold Earned')
+        elif info == 'KDA':
+            ax.plot(df['Match ID'], df['KDA'], marker='o', linestyle='-', label='KDA')
+        elif info == 'Vision Score':
+            ax.plot(df['Match ID'], df['Vision Score'], marker='o', linestyle='-', label='Vision Score')
+
+    ax.set_title('Selected Information Between Matches')
+    ax.set_xlabel('Match Index')
+    ax.set_ylabel('Value')
+    ax.legend()
+    plt.tight_layout()
+    st.pyplot(fig)
+
+
 def main():
     # Set Streamlit page configuration
     st.set_page_config(page_title="LoL Match Information", page_icon="🎮", layout="wide")
@@ -110,6 +133,19 @@ def main():
 
                             # Show the subplots
                             st.pyplot(fig)
+
+                            # Initialize the counter in session state
+                            if 'widget_counter' not in st.session_state:
+                                st.session_state.widget_counter = 0
+
+                            # Display the multiselect widget for selecting information to plot
+                            unique_key = f"info_multiselect_{st.session_state.widget_counter}"
+                            st.session_state.widget_counter += 1
+                            selected_info = st.multiselect("Select information to plot",
+                                                           ['Gold Earned', 'KDA', 'Vision Score'], key=unique_key)
+
+                            # Display the graph based on the user's selection
+                            plot_graph(df, selected_info)
     except Exception as e:
         st.error(f"An error occurred: {str(e)}")
 
