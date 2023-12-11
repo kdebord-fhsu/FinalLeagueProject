@@ -17,6 +17,10 @@ The application fetches match details, including game duration, kills, deaths, a
 1. Install the required Python packages:
 
    ```bash
-   pip install requirements.txt
+   pip install -r requirements.txt
 
 2. Create a .env file with your RIOT_API_Key
+
+3. Type the following into your venv terminal
+   ```bash
+   streamlit run riot_app.py
