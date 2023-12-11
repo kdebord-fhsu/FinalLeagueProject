@@ -16,6 +16,24 @@ def plot_graph(df, selected_info):
             ax.plot(df['Match ID'], df['KDA'], marker='o', linestyle='-', label='KDA')
         elif info == 'Vision Score':
             ax.plot(df['Match ID'], df['Vision Score'], marker='o', linestyle='-', label='Vision Score')
+        elif info == 'Assists':
+            ax.plot(df['Match ID'], df['Assists'], marker='o', linestyle='-', label='Assists')
+        elif info == 'CS (Minions Killed)':
+            ax.plot(df['Match ID'], df['CS (Minions Killed)'], marker='o', linestyle='-', label='CS (Minions Killed)')
+        elif info == 'Deaths':
+            ax.plot(df['Match ID'], df['Deaths'], marker='o', linestyle='-', label='Deaths')
+        elif info == 'Damage Dealt to Champions':
+            ax.plot(df['Match ID'], df['Damage Dealt to Champions'], marker='o', linestyle='-', label='Damage Dealt to Champions')
+        elif info == 'wardsPlaced':
+            ax.plot(df['Match ID'], df['wardsPlaced'], marker='o', linestyle='-', label='Wards Placed')
+        elif info == 'wardsKilled':
+            ax.plot(df['Match ID'], df['wardsKilled'], marker='o', linestyle='-', label='Wards Killed')
+        elif info == 'visionWardsBoughtInGame':
+            ax.plot(df['Match ID'], df['visionWardsBoughtInGame'], marker='o', linestyle='-', label='Vision Wards Bought')
+        elif info == 'Vision Score':
+            ax.plot(df['Match ID'], df['Vision Score'], marker='o', linestyle='-', label='Vision Score')
+        elif info == 'Kills':
+            ax.plot(df['Match ID'], df['Kills'], marker='o', linestyle='-', label='Kills')
 
     ax.set_title('Selected Information Between Matches')
     ax.set_xlabel('Match Index')
@@ -23,6 +41,7 @@ def plot_graph(df, selected_info):
     ax.legend()
     plt.tight_layout()
     st.pyplot(fig)
+
 
 def main():
     # Set Streamlit page configuration
@@ -96,9 +115,12 @@ def main():
                             f"Vision Wards Bought: <span style='color:{result_color}'>{row['visionWardsBoughtInGame']}</span>",
                             unsafe_allow_html=True)
 
+                        # Get numeric columns excluding 'Match ID' for the multiselect options
+                        numeric_columns = df.drop(columns=['Match ID']).select_dtypes(include=['number']).columns
+
                         # Display the multiselect widget for selecting information to plot
                         selected_info = st.multiselect("Select information to plot",
-                                                       ['Gold Earned', 'KDA', 'Vision Score'],
+                                                       numeric_columns,
                                                        key=f"{row['Match ID']}_multiselect")
 
                         # Display the graph based on user's selection
