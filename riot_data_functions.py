@@ -3,7 +3,6 @@ from dotenv import load_dotenv
 import streamlit as st
 import os
 import pandas as pd
-import matplotlib.pyplot as plt
 
 load_dotenv()
 

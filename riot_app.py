@@ -1,46 +1,23 @@
 import streamlit as st
-import matplotlib.pyplot as plt
+import plotly.graph_objects as go
 from riot_data_functions import setup_env, fetch_match_data
+
 
 def plot_graph(df, selected_info):
     if not selected_info:
         st.warning("Please select at least one information to plot.")
         return
 
-    fig, ax = plt.subplots(figsize=(10, 6))
+    fig = go.Figure()
 
     for info in selected_info:
-        if info == 'Gold Earned':
-            ax.plot(df['Match ID'], df['Gold Earned'], marker='o', linestyle='-', label='Gold Earned')
-        elif info == 'KDA':
-            ax.plot(df['Match ID'], df['KDA'], marker='o', linestyle='-', label='KDA')
-        elif info == 'Vision Score':
-            ax.plot(df['Match ID'], df['Vision Score'], marker='o', linestyle='-', label='Vision Score')
-        elif info == 'Assists':
-            ax.plot(df['Match ID'], df['Assists'], marker='o', linestyle='-', label='Assists')
-        elif info == 'CS (Minions Killed)':
-            ax.plot(df['Match ID'], df['CS (Minions Killed)'], marker='o', linestyle='-', label='CS (Minions Killed)')
-        elif info == 'Deaths':
-            ax.plot(df['Match ID'], df['Deaths'], marker='o', linestyle='-', label='Deaths')
-        elif info == 'Damage Dealt to Champions':
-            ax.plot(df['Match ID'], df['Damage Dealt to Champions'], marker='o', linestyle='-', label='Damage Dealt to Champions')
-        elif info == 'wardsPlaced':
-            ax.plot(df['Match ID'], df['wardsPlaced'], marker='o', linestyle='-', label='Wards Placed')
-        elif info == 'wardsKilled':
-            ax.plot(df['Match ID'], df['wardsKilled'], marker='o', linestyle='-', label='Wards Killed')
-        elif info == 'visionWardsBoughtInGame':
-            ax.plot(df['Match ID'], df['visionWardsBoughtInGame'], marker='o', linestyle='-', label='Vision Wards Bought')
-        elif info == 'Vision Score':
-            ax.plot(df['Match ID'], df['Vision Score'], marker='o', linestyle='-', label='Vision Score')
-        elif info == 'Kills':
-            ax.plot(df['Match ID'], df['Kills'], marker='o', linestyle='-', label='Kills')
+        fig.add_trace(go.Scatter(x=df['Match ID'], y=df[info], mode='lines+markers', name=info,
+                                 text=df['Match ID'].astype(str) + ' - ' + df['Result'],
+                                 hoverinfo='x+y+text'))
 
-    ax.set_title('Selected Information Between Matches')
-    ax.set_xlabel('Match Index')
-    ax.set_ylabel('Value')
-    ax.legend()
-    plt.tight_layout()
-    st.pyplot(fig)
+    fig.update_layout(title='Selected Information Between Matches', xaxis_title='Match Index', yaxis_title='Value')
+
+    st.plotly_chart(fig)
 
 
 def main():
